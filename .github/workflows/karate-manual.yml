@@ -1,0 +1,888 @@
+name: 🚀 Karate API Tests - Manual & Scheduled
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag de pruebas a ejecutar (ej: @login, @security)"
+        required: true
+        type: string
+      ambiente:
+        description: "Ambiente a ejecutar (DEV o QA)"
+        required: true
+        type: choice
+        options:
+          - DEV
+          - QA
+        default: QA
+      correo:
+        description: "Correo donde llegarán las notificaciones"
+        required: true
+        type: string
+  
+  schedule:
+    # Lunes a Viernes a las 8 AM (Perú UTC-5 = 13:00 UTC)
+    - cron: '0 13 * * 1-5'
+    # Sábados y Domingos a las 10 AM (Perú UTC-5 = 15:00 UTC)
+    - cron: '0 15 * * 0,6'
+
+jobs:
+  run-karate-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+
+    steps:
+
+      - name: 🎯 Determinar tag y parámetros según trigger
+        id: setup
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            # Detectar qué cron se ejecutó basado en la hora UTC
+            HOUR=$(date -u +%H)
+            DAY=$(date -u +%u)  # 1=Lunes, 7=Domingo
+            
+            if [ "$HOUR" = "13" ] && [ "$DAY" -ge 1 ] && [ "$DAY" -le 5 ]; then
+              # Lunes a Viernes a las 13:00 UTC (8 AM Perú)
+              echo "tag=@dailyTests" >> $GITHUB_OUTPUT
+            elif [ "$HOUR" = "15" ] && ([ "$DAY" = "6" ] || [ "$DAY" = "7" ]); then
+              # Sábado o Domingo a las 15:00 UTC (10 AM Perú)
+              echo "tag=@postLoginRolAuxiliar" >> $GITHUB_OUTPUT
+            else
+              echo "tag=@dailyTests" >> $GITHUB_OUTPUT
+            fi
+            echo "ambiente=QA" >> $GITHUB_OUTPUT
+            echo "correo=2101010261@undc.edu.pe" >> $GITHUB_OUTPUT
+          else
+            # Ejecución manual
+            echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+            echo "ambiente=${{ github.event.inputs.ambiente }}" >> $GITHUB_OUTPUT
+            echo "correo=${{ github.event.inputs.correo }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 📥 Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: ☕ Configurar JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: 🕐 Capturar fecha de inicio
+        id: fecha_inicio
+        run: |
+          echo "datetime=$(TZ=America/Lima date '+%d/%m/%Y %H:%M:%S %Z')" >> $GITHUB_OUTPUT
+          echo "year=$(TZ=America/Lima date '+%Y')" >> $GITHUB_OUTPUT
+
+      - name: ✉️ Notificar INICIO de ejecución
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.MAIL_SERVER }}
+          server_port: ${{ secrets.MAIL_PORT }}
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          to: ${{ steps.setup.outputs.correo }}
+          from: ${{ secrets.MAIL_USERNAME }}
+          subject: "🔵 Inicio de Pruebas Karate – ${{ steps.setup.outputs.tag }}"
+          html_body: |
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            </head>
+            <body style="margin: 0; padding: 0; background-color: #f5f7fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f7fa;">
+                <tr>
+                  <td align="center" style="padding: 40px 20px;">
+                    <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden;">
+                      
+                      <!-- Header con logo -->
+                      <tr>
+                        <td style="background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%); padding: 30px; text-align: center;">
+                          <img src="https://res.cloudinary.com/dvrsdqsl1/image/upload/v1764399269/Blue_Minimalist_Technology_Cube_Logo_1_x445ab.png" alt="Logo" style="max-width: 120px; height: auto; margin-bottom: 15px;">
+                          <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;">🔵 Ejecución de Pruebas Iniciada</h1>
+                        </td>
+                      </tr>
+                      
+                      <!-- Contenido -->
+                      <tr>
+                        <td style="padding: 40px 30px;">
+                          <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                            Estimado/a,
+                          </p>
+                          <p style="color: #555555; font-size: 15px; line-height: 1.6; margin: 0 0 30px 0;">
+                            Se ha iniciado la ejecución automática de pruebas <strong style="color: #1a73e8;">Karate API</strong> en el sistema de testing continuo.
+                          </p>
+                          
+                          <!-- Información de ejecución -->
+                          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8f9fa; border-radius: 8px; overflow: hidden; margin-bottom: 30px;">
+                            <tr>
+                              <td style="padding: 20px;">
+                                <table width="100%" cellpadding="8" cellspacing="0" border="0">
+                                  <tr>
+                                    <td style="color: #666666; font-size: 14px; font-weight: 600; width: 35%;">🏷️ Tag seleccionado:</td>
+                                    <td style="color: #1a73e8; font-size: 14px; font-weight: 600;">${{ steps.setup.outputs.tag }}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style="color: #666666; font-size: 14px; font-weight: 600; padding-top: 10px;">🌍 Ambiente:</td>
+                                    <td style="color: #1a73e8; font-size: 14px; font-weight: 600; padding-top: 10px;">${{ steps.setup.outputs.ambiente }}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style="color: #666666; font-size: 14px; font-weight: 600; padding-top: 10px;">📅 Fecha/Hora:</td>
+                                    <td style="color: #333333; font-size: 14px; padding-top: 10px;">${{ steps.fecha_inicio.outputs.datetime }}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style="color: #666666; font-size: 14px; font-weight: 600; padding-top: 10px;">🔢 Ejecución #:</td>
+                                    <td style="color: #333333; font-size: 14px; padding-top: 10px;">${{ github.run_number }}</td>
+                                  </tr>
+                                </table>
+                              </td>
+                            </tr>
+                          </table>
+                          
+                          <!-- Nota informativa -->
+                          <div style="background-color: #e3f2fd; border-left: 4px solid #1a73e8; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+                            <p style="color: #1565c0; font-size: 14px; margin: 0; line-height: 1.5;">
+                              <strong>ℹ️ Información:</strong> Recibirás una notificación automática con los resultados cuando la ejecución finalice.
+                            </p>
+                          </div>
+                          
+                          <p style="color: #555555; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
+                            Saludos cordiales,<br>
+                            <strong style="color: #1a73e8;">Sistema Automático de QA</strong>
+                          </p>
+                        </td>
+                      </tr>
+                      
+                      <!-- Footer -->
+                      <tr>
+                        <td style="background-color: #f8f9fa; padding: 20px 30px; border-top: 1px solid #e0e0e0;">
+                          <p style="color: #999999; font-size: 12px; margin: 0; text-align: center;">
+                            GitHub Actions · Testing Continuo · ${{ steps.fecha_inicio.outputs.year }}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </body>
+            </html>
+
+
+      - name: 📦 Instalar dependencias
+        run: mvn clean install -DskipTests
+
+      - name: 🧪 Ejecutar pruebas Karate con tag
+        id: karate
+        run: |
+          echo "karate_failed=false" >> $GITHUB_OUTPUT
+          mvn test -Dkarate.options="--tags ${{ steps.setup.outputs.tag }}" -Dkarate.env=${{ steps.setup.outputs.ambiente }} || echo "karate_failed=true" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      # Detectar dinámicamente el JSON resumen (varía por versiones)
+      - name: 🔍 Detectar archivo de resumen Karate (busca primero)
+        id: detect
+        run: |
+          FILE=$(find target -type f -name "karate-summary-json.txt" -o -name "karate-summary.json" | head -n 1)
+          if [ -z "$FILE" ]; then
+            echo "⚠️ No se encontró karate-summary-json.txt ni karate-summary.json"
+            echo "file_summary=" >> $GITHUB_OUTPUT
+          else
+            echo "Resumen encontrado en: $FILE"
+            echo "file_summary=$FILE" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: 📝 Generar tabla HTML de resultados (desde HTML Karate)
+        id: table
+        run: |
+          REPORT_DIR="target/karate-reports"
+
+          echo "<table border='1' cellspacing='0' cellpadding='6' style='border-collapse:collapse;'>" > table.html
+          echo "<tr style='background:#f2f2f2; font-weight:bold;'><th>Escenario</th><th>Estado</th></tr>" >> table.html
+
+          # Buscar todos los HTML de Karate
+          for f in $(find "$REPORT_DIR" -type f -name "*.html"); do
+
+            # Extraer nombres de escenarios
+            sed -n 's/.*scenario-name">\(.*\)<\/.*/\1/p' "$f" > names.txt
+
+            # Extraer estado usando clase scenario-time passed / failed
+            sed -n 's/.*scenario-time \(passed\|failed\).*/\1/p' "$f" > status.txt
+
+            # Combinar ambas listas
+            paste names.txt status.txt | while IFS=$'\t' read -r name status; do
+
+              # PASSED o FAILED en mayúscula
+              STATUS_UPPER=$(echo "$status" | tr '[:lower:]' '[:upper:]')
+
+              # Color visual
+              if [ "$STATUS_UPPER" = "PASSED" ]; then
+                COLOR="green"
+              else
+                COLOR="red"
+              fi
+
+              echo "<tr>
+                      <td>$name</td>
+                      <td style='color:$COLOR; font-weight:bold;'>$STATUS_UPPER</td>
+                    </tr>" >> table.html
+
+            done
+
+          done
+
+          rm -f names.txt status.txt || true
+
+          echo "</table>" >> table.html
+
+          SUMMARY=$(cat table.html)
+          echo "summary_table<<EOF" >> $GITHUB_OUTPUT
+          echo "$SUMMARY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: 📊 Publicar resultados en GitHub Summary
+        if: always()
+        run: |
+          echo "# 📊 Resultados de Pruebas Karate" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📋 Información de Ejecución" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Parámetro | Valor |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 🏷️ Tag ejecutado | \`${{ steps.setup.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🌍 Ambiente | \`${{ steps.setup.outputs.ambiente }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📅 Fecha/Hora | $(date '+%Y-%m-%d %H:%M:%S') |" >> $GITHUB_STEP_SUMMARY
+          echo "| ✅ Estado | ${{ steps.karate.outputs.karate_failed == 'true' && '❌ FAILED' || '✅ PASSED' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🧪 Resultados por Escenario" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Generar tabla en formato Markdown para GitHub
+          echo "| Escenario | Estado |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          
+          REPORT_DIR="target/karate-reports"
+          for f in $(find "$REPORT_DIR" -type f -name "*.html" 2>/dev/null); do
+            sed -n 's/.*scenario-name">\(.*\)<\/.*/\1/p' "$f" > names_summary.txt
+            sed -n 's/.*scenario-time \(passed\|failed\).*/\1/p' "$f" > status_summary.txt
+            
+            paste names_summary.txt status_summary.txt | while IFS=$'\t' read -r name status; do
+              STATUS_UPPER=$(echo "$status" | tr '[:lower:]' '[:upper:]')
+              if [ "$STATUS_UPPER" = "PASSED" ]; then
+                EMOJI="✅"
+              else
+                EMOJI="❌"
+              fi
+              echo "| $name | $EMOJI $STATUS_UPPER |" >> $GITHUB_STEP_SUMMARY
+            done
+          done
+          
+          rm -f names_summary.txt status_summary.txt || true
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🔗 Enlaces Útiles" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- 📄 [Ver reporte completo en GitHub Pages](https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/reports/${{ github.run_number }}/karate-summary.html)" >> $GITHUB_STEP_SUMMARY
+          echo "- 📦 [Descargar artefactos](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+
+
+
+      # Crear una carpeta con SOLO los archivos del reporte (para evitar nested-zip)
+      - name: 📁 Empaquetar únicamente los archivos del reporte (sin .jar/.class/etc)
+        run: |
+          rm -rf karate-report-package || true
+          mkdir karate-report-package
+          # Si existe, copiar toda la carpeta karate-reports (estilos, html, imgs)
+          if [ -d "target/karate-reports" ]; then
+            cp -r target/karate-reports/* karate-report-package/ || true
+          else
+            echo "⚠️ No existe target/karate-reports; nada para empaquetar"
+          fi
+          # opcional: eliminar archivos potencialmente bloqueados por Gmail dentro de la carpeta
+          find karate-report-package -type f \( -iname "*.jar" -o -iname "*.class" -o -iname "*.sh" -o -iname "*.exe" -o -iname "*.bat" -o -iname "*.cmd" \) -delete || true
+          # verifica contenido
+          echo "Contenido de karate-report-package:"
+          ls -R karate-report-package || true
+
+      # SUBIR la carpeta como ARTIFACT (esto generará UN solo ZIP cuyo contenido son los archivos del reporte)
+      - name: 📤 Subir carpeta del reporte como artefacto (genera 1 ZIP en GitHub)
+        uses: actions/upload-artifact@v4
+        with:
+          name: karate-report
+          path: karate-report-package
+          retention-days: 14
+
+      - name: 📋 Crear metadata del reporte
+        if: always()
+        run: |
+          # Configurar zona horaria de Perú
+          export TZ=America/Lima
+          CURRENT_DATE=$(date '+%Y-%m-%d %H:%M:%S')
+          
+          # Crear archivo de metadata JSON
+          cat > karate-report-package/metadata.json << EOF
+          {
+            "run_number": "${{ github.run_number }}",
+            "tag": "${{ steps.setup.outputs.tag }}",
+            "ambiente": "${{ steps.setup.outputs.ambiente }}",
+            "fecha": "${CURRENT_DATE}",
+            "timezone": "America/Lima"
+          }
+          EOF
+          
+          echo "Metadata creado para reporte #${{ github.run_number }}"
+          cat karate-report-package/metadata.json
+
+      - name: 🌐 Publicar reporte en GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        if: always()
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./karate-report-package
+          destination_dir: reports/${{ github.run_number }}
+          keep_files: true
+
+      - name: 📝 Crear índice de reportes con historial completo
+        if: always()
+        run: |
+          # Configurar zona horaria de Perú
+          export TZ=America/Lima
+          CURRENT_DATE=$(date '+%Y-%m-%d %H:%M:%S')
+          
+          # Checkout de la rama gh-pages para leer reportes existentes
+          git fetch origin gh-pages:gh-pages || true
+          git checkout gh-pages || true
+          
+          # Obtener lista de reportes existentes
+          REPORTS_DIRS=$(find reports -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort -rn || echo "")
+          
+          # Volver a la rama de trabajo
+          git checkout -
+          
+          # Crear carpeta temporal
+          mkdir -p gh-pages-temp
+          
+          # Generar fecha actual
+          CURRENT_DATE=$(date '+%Y-%m-%d %H:%M:%S')
+          
+          # Crear HTML con historial completo
+          cat > gh-pages-temp/index.html << EOF
+          <!DOCTYPE html>
+          <html lang="es">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Reportes Karate - Historial</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+              h1, h2 { color: #1a73e8; }
+              .container { max-width: 1200px; margin: 0 auto; }
+              .stats, .executor-panel { 
+                background: white; 
+                padding: 20px; 
+                border-radius: 5px; 
+                margin-bottom: 20px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+              }
+              .executor-panel { background: #e8f5e9; border-left: 4px solid #34a853; }
+              .form-group { margin-bottom: 15px; }
+              .form-group label { 
+                display: block; 
+                margin-bottom: 5px; 
+                font-weight: bold; 
+                color: #333;
+              }
+              .form-group input, .form-group select { 
+                width: 100%; 
+                padding: 10px; 
+                border: 1px solid #ddd; 
+                border-radius: 4px; 
+                font-size: 14px;
+                box-sizing: border-box;
+              }
+              .form-group input:focus, .form-group select:focus {
+                outline: none;
+                border-color: #1a73e8;
+              }
+              .btn-execute { 
+                background: #1a73e8; 
+                color: white; 
+                padding: 12px 24px; 
+                border: none; 
+                border-radius: 4px; 
+                cursor: pointer; 
+                font-size: 16px;
+                font-weight: bold;
+                width: 100%;
+              }
+              .btn-execute:hover { background: #1557b0; }
+              .btn-execute:disabled { background: #ccc; cursor: not-allowed; }
+              .message { 
+                padding: 12px; 
+                border-radius: 4px; 
+                margin-top: 15px; 
+                display: none;
+              }
+              .message.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+              .message.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+              .message.show { display: block; }
+              .report-list { list-style: none; padding: 0; }
+              .report-item { 
+                background: white; 
+                padding: 15px; 
+                margin: 10px 0; 
+                border-radius: 5px; 
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+              }
+              .report-link { 
+                color: #1a73e8; 
+                text-decoration: none; 
+                font-size: 18px; 
+                font-weight: bold;
+              }
+              .report-link:hover { text-decoration: underline; }
+              .report-date { color: #666; font-size: 14px; margin-top: 5px; }
+              .badge { 
+                display: inline-block; 
+                padding: 3px 8px; 
+                border-radius: 3px; 
+                font-size: 12px; 
+                margin-left: 10px;
+              }
+              .badge-new { background: #34a853; color: white; }
+              .info-text { color: #666; font-size: 13px; margin-top: 5px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>📊 Historial de Reportes Karate</h1>
+              
+              <!-- Panel de ejecución -->
+              <div class="executor-panel">
+                <h2>🚀 Ejecutar Nuevas Pruebas</h2>
+                <form id="executionForm">
+                  <div class="form-group">
+                    <label for="githubToken">GitHub Token (PAT)</label>
+                    <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" required>
+                    <p class="info-text">Necesitas un Personal Access Token con permiso 'workflow'. <a href="https://github.com/settings/tokens/new?scopes=workflow" target="_blank">Crear token</a></p>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="tag">Tag a ejecutar</label>
+                    <input type="text" id="tag" placeholder="@postLoginRolDirectivo" required>
+                    <p class="info-text">Ejemplo: @postLoginRolDirectivo, @security, @smoke</p>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="ambiente">Ambiente</label>
+                    <select id="ambiente" required>
+                      <option value="QA" selected>QA</option>
+                      <option value="DEV">DEV</option>
+                    </select>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="correo">Correo de notificación</label>
+                    <input type="email" id="correo" placeholder="tu-correo@ejemplo.com" value="2101010261@undc.edu.pe" required>
+                  </div>
+                  
+                  <button type="submit" class="btn-execute" id="btnExecute">
+                    ▶️ Ejecutar Pruebas
+                  </button>
+                  
+                  <div id="message" class="message"></div>
+                </form>
+              </div>
+              
+              <div class="stats">
+                <p><strong>Último reporte generado:</strong> Run #${{ github.run_number }}</p>
+                <p><strong>Tag:</strong> ${{ steps.setup.outputs.tag }}</p>
+                <p><strong>Ambiente:</strong> ${{ steps.setup.outputs.ambiente }}</p>
+                <p><strong>Fecha:</strong> ${CURRENT_DATE}</p>
+              </div>
+              
+              <h2>📋 Historial de Ejecuciones</h2>
+              <ul class="report-list">
+          EOF
+          
+          # Agregar reporte actual primero
+          cat >> gh-pages-temp/index.html << EOF
+                <li class="report-item">
+                  <a class="report-link" href="reports/${{ github.run_number }}/karate-summary.html">
+                    📄 Reporte #${{ github.run_number }} - Tag: ${{ steps.setup.outputs.tag }}
+                  </a>
+                  <span class="badge badge-new">NUEVO</span>
+                  <div class="report-date">Ambiente: ${{ steps.setup.outputs.ambiente }} | Fecha: ${CURRENT_DATE}</div>
+                </li>
+          EOF
+          
+          # Agregar reportes anteriores
+          if [ -n "$REPORTS_DIRS" ]; then
+            for report_dir in $REPORTS_DIRS; do
+              RUN_NUM=$(basename "$report_dir")
+              # Evitar duplicar el reporte actual
+              if [ "$RUN_NUM" != "${{ github.run_number }}" ]; then
+                # Intentar leer metadata del reporte
+                METADATA_FILE="$report_dir/metadata.json"
+                if [ -f "$METADATA_FILE" ]; then
+                  # Extraer información del metadata
+                  TAG=$(grep -oP '"tag":\s*"\K[^"]+' "$METADATA_FILE" 2>/dev/null || echo "N/A")
+                  AMBIENTE=$(grep -oP '"ambiente":\s*"\K[^"]+' "$METADATA_FILE" 2>/dev/null || echo "N/A")
+                  FECHA=$(grep -oP '"fecha":\s*"\K[^"]+' "$METADATA_FILE" 2>/dev/null || echo "N/A")
+                  
+                  cat >> gh-pages-temp/index.html << EOF
+              <li class="report-item">
+                <a class="report-link" href="$report_dir/karate-summary.html">
+                  📄 Reporte #$RUN_NUM - Tag: $TAG
+                </a>
+                <div class="report-date">Ambiente: $AMBIENTE | Fecha: $FECHA</div>
+              </li>
+          EOF
+                else
+                  # Si no existe metadata, obtener fecha del commit de Git
+                  COMMIT_DATE=$(git log --all --format="%cd" --date=format:'%Y-%m-%d %H:%M:%S' --diff-filter=A -- "$report_dir" 2>/dev/null | head -n1)
+                  
+                  if [ -z "$COMMIT_DATE" ]; then
+                    # Si no se encuentra en git log, intentar con la fecha del último commit que modificó el directorio
+                    COMMIT_DATE=$(git log -1 --format="%cd" --date=format:'%Y-%m-%d %H:%M:%S' -- "$report_dir" 2>/dev/null)
+                  fi
+                  
+                  if [ -z "$COMMIT_DATE" ]; then
+                    COMMIT_DATE="Fecha no disponible"
+                  fi
+                  
+                  cat >> gh-pages-temp/index.html << EOF
+              <li class="report-item">
+                <a class="report-link" href="$report_dir/karate-summary.html">
+                  📄 Reporte #$RUN_NUM
+                </a>
+                <div class="report-date">Reporte histórico | Fecha: $COMMIT_DATE</div>
+              </li>
+          EOF
+                fi
+              fi
+            done
+          fi
+          
+          # Cerrar HTML con JavaScript mejorado
+          cat >> gh-pages-temp/index.html << 'EOF'
+              </ul>
+            </div>
+            
+            <!-- Modal de confirmación -->
+            <div id="confirmModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+              <div style="background:white; padding:30px; border-radius:8px; max-width:500px; text-align:center; box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+                <h3 style="color:#1a73e8; margin-top:0;">🚀 Confirmar Ejecución</h3>
+                <p style="font-size:16px; color:#333; line-height:1.6;">
+                  Las pruebas se ejecutarán en segundo plano y recibirás una notificación en tu correo <strong id="modalEmail"></strong> cuando finalicen.
+                </p>
+                <p style="font-size:14px; color:#666; margin-top:10px;">
+                  Tag: <strong id="modalTag"></strong> | Ambiente: <strong id="modalAmbiente"></strong>
+                </p>
+                <div style="margin-top:25px; display:flex; gap:10px; justify-content:center;">
+                  <button onclick="cancelExecution()" style="background:#666; color:white; padding:10px 20px; border:none; border-radius:4px; cursor:pointer; font-size:14px;">
+                    Cancelar
+                  </button>
+                  <button onclick="confirmExecution()" style="background:#1a73e8; color:white; padding:10px 20px; border:none; border-radius:4px; cursor:pointer; font-size:14px; font-weight:bold;">
+                    ✓ Confirmar y Ejecutar
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <script>
+              const form = document.getElementById('executionForm');
+              const btnExecute = document.getElementById('btnExecute');
+              const message = document.getElementById('message');
+              const confirmModal = document.getElementById('confirmModal');
+              let formData = {};
+              
+              // Validación de campos
+              function validateForm() {
+                const token = document.getElementById('githubToken').value.trim();
+                const tag = document.getElementById('tag').value.trim();
+                const correo = document.getElementById('correo').value.trim();
+                
+                // Validar token
+                if (!token) {
+                  showError('⚠️ Por favor ingresa tu GitHub Token');
+                  return false;
+                }
+                
+                if (!token.startsWith('ghp_') && !token.startsWith('github_pat_')) {
+                  showError('⚠️ El token debe comenzar con "ghp_" o "github_pat_"');
+                  return false;
+                }
+                
+                if (token.length < 40) {
+                  showError('⚠️ El token parece ser demasiado corto. Verifica que sea correcto.');
+                  return false;
+                }
+                
+                // Validar tag
+                if (!tag) {
+                  showError('⚠️ Por favor ingresa un tag para ejecutar');
+                  return false;
+                }
+                
+                if (!tag.startsWith('@')) {
+                  showError('⚠️ El tag debe comenzar con @ (ejemplo: @postLoginRolDirectivo)');
+                  return false;
+                }
+                
+                // Validar correo
+                if (!correo) {
+                  showError('⚠️ Por favor ingresa un correo electrónico');
+                  return false;
+                }
+                
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(correo)) {
+                  showError('⚠️ Por favor ingresa un correo electrónico válido');
+                  return false;
+                }
+                
+                return true;
+              }
+              
+              function showError(msg) {
+                message.className = 'message error show';
+                message.textContent = msg;
+                setTimeout(() => {
+                  message.className = 'message';
+                }, 5000);
+              }
+              
+              function showConfirmModal() {
+                document.getElementById('modalEmail').textContent = formData.correo;
+                document.getElementById('modalTag').textContent = formData.tag;
+                document.getElementById('modalAmbiente').textContent = formData.ambiente;
+                confirmModal.style.display = 'flex';
+              }
+              
+              function cancelExecution() {
+                confirmModal.style.display = 'none';
+                formData = {};
+              }
+              
+              async function confirmExecution() {
+                confirmModal.style.display = 'none';
+                
+                // Deshabilitar botón y mostrar loading
+                btnExecute.disabled = true;
+                btnExecute.textContent = '⏳ Ejecutando...';
+                message.className = 'message';
+                message.style.display = 'none';
+                
+                try {
+                  const response = await fetch('https://api.github.com/repos/${{ github.repository }}/actions/workflows/karate-manual.yml/dispatches', {
+                    method: 'POST',
+                    headers: {
+                      'Accept': 'application/vnd.github.v3+json',
+                      'Authorization': 'token ' + formData.token,
+                      'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                      ref: 'main',
+                      inputs: {
+                        tag: formData.tag,
+                        ambiente: formData.ambiente,
+                        correo: formData.correo
+                      }
+                    })
+                  });
+                  
+                  if (response.status === 204) {
+                    message.className = 'message success show';
+                    message.textContent = '✅ Pruebas iniciadas correctamente. Recibirás una notificación por correo cuando finalicen.';
+                    form.reset();
+                    document.getElementById('correo').value = '2101010261@undc.edu.pe';
+                    
+                    // Recargar página después de 3 segundos
+                    setTimeout(() => {
+                      window.location.reload();
+                    }, 3000);
+                  } else {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Error desconocido');
+                  }
+                } catch (error) {
+                  message.className = 'message error show';
+                  message.textContent = '❌ Error al ejecutar las pruebas: ' + error.message + '. Verifica tu token y permisos.';
+                } finally {
+                  btnExecute.disabled = false;
+                  btnExecute.textContent = '▶️ Ejecutar Pruebas';
+                  formData = {};
+                }
+              }
+              
+              form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                // Validar formulario
+                if (!validateForm()) {
+                  return;
+                }
+                
+                // Guardar datos del formulario
+                formData = {
+                  token: document.getElementById('githubToken').value.trim(),
+                  tag: document.getElementById('tag').value.trim(),
+                  ambiente: document.getElementById('ambiente').value,
+                  correo: document.getElementById('correo').value.trim()
+                };
+                
+                // Mostrar modal de confirmación
+                showConfirmModal();
+              });
+            </script>
+          </body>
+          </html>
+          EOF
+
+      - name: 🌐 Publicar índice en GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        if: always()
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./gh-pages-temp
+          keep_files: true
+
+      - name: 🕐 Capturar fecha de fin
+        id: fecha_fin
+        if: always()
+        run: |
+          echo "datetime=$(TZ=America/Lima date '+%d/%m/%Y %H:%M:%S %Z')" >> $GITHUB_OUTPUT
+          echo "year=$(TZ=America/Lima date '+%Y')" >> $GITHUB_OUTPUT
+
+      - name: ✉️ Notificar FIN de ejecución (con tabla y link al artefacto)
+        if: always()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.MAIL_SERVER }}
+          server_port: ${{ secrets.MAIL_PORT }}
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          to: ${{ steps.setup.outputs.correo }}
+          from: ${{ secrets.MAIL_USERNAME }}
+          subject: "🟢 Resultados de Pruebas Karate – ${{ steps.setup.outputs.tag }}"
+          html_body: |
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            </head>
+            <body style="margin: 0; padding: 0; background-color: #f5f7fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f7fa;">
+                <tr>
+                  <td align="center" style="padding: 40px 20px;">
+                    <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden;">
+                      
+                      <!-- Header con logo -->
+                      <tr>
+                        <td style="background: linear-gradient(135deg, #34a853 0%, #1e8e3e 100%); padding: 30px; text-align: center;">
+                          <img src="https://res.cloudinary.com/dvrsdqsl1/image/upload/v1764399269/Blue_Minimalist_Technology_Cube_Logo_1_x445ab.png" alt="Logo" style="max-width: 120px; height: auto; margin-bottom: 15px;">
+                          <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;">🟢 Resultados de Pruebas</h1>
+                        </td>
+                      </tr>
+                      
+                      <!-- Contenido -->
+                      <tr>
+                        <td style="padding: 40px 30px;">
+                          <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                            Estimado/a,
+                          </p>
+                          <p style="color: #555555; font-size: 15px; line-height: 1.6; margin: 0 0 30px 0;">
+                            La ejecución de pruebas <strong style="color: #34a853;">Karate API</strong> ha finalizado. A continuación encontrarás el resumen de resultados:
+                          </p>
+                          
+                          <!-- Estado general -->
+                          <div style="background: ${{ steps.karate.outputs.karate_failed == 'true' && 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)' || 'linear-gradient(135deg, #34a853 0%, #1e8e3e 100%)' }}; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 30px;">
+                            <p style="color: #ffffff; font-size: 18px; font-weight: 600; margin: 0;">
+                              Estado: ${{ steps.karate.outputs.karate_failed == 'true' && '❌ FALLÓ' || '✅ EXITOSO' }}
+                            </p>
+                          </div>
+                          
+                          <!-- Información de ejecución -->
+                          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8f9fa; border-radius: 8px; overflow: hidden; margin-bottom: 30px;">
+                            <tr>
+                              <td style="padding: 20px;">
+                                <table width="100%" cellpadding="8" cellspacing="0" border="0">
+                                  <tr>
+                                    <td style="color: #666666; font-size: 14px; font-weight: 600; width: 35%;">🏷️ Tag ejecutado:</td>
+                                    <td style="color: #34a853; font-size: 14px; font-weight: 600;">${{ steps.setup.outputs.tag }}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style="color: #666666; font-size: 14px; font-weight: 600; padding-top: 10px;">🌍 Ambiente:</td>
+                                    <td style="color: #34a853; font-size: 14px; font-weight: 600; padding-top: 10px;">${{ steps.setup.outputs.ambiente }}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style="color: #666666; font-size: 14px; font-weight: 600; padding-top: 10px;">📅 Fecha/Hora:</td>
+                                    <td style="color: #333333; font-size: 14px; padding-top: 10px;">${{ steps.fecha_fin.outputs.datetime }}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style="color: #666666; font-size: 14px; font-weight: 600; padding-top: 10px;">🔢 Ejecución #:</td>
+                                    <td style="color: #333333; font-size: 14px; padding-top: 10px;">${{ github.run_number }}</td>
+                                  </tr>
+                                </table>
+                              </td>
+                            </tr>
+                          </table>
+                          
+                          <!-- Resumen de escenarios -->
+                          <h3 style="color: #333333; font-size: 18px; margin: 0 0 15px 0; border-bottom: 2px solid #34a853; padding-bottom: 10px;">
+                            📊 Resumen de Escenarios
+                          </h3>
+                          <div style="overflow-x: auto; margin-bottom: 30px;">
+                            ${{ steps.table.outputs.summary_table }}
+                          </div>
+                          
+                          <!-- Botón de acción -->
+                          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 30px 0;">
+                            <tr>
+                              <td align="center">
+                                <a href="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/reports/${{ github.run_number }}/karate-summary.html" style="background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%); color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 600; font-size: 15px; display: inline-block; box-shadow: 0 2px 8px rgba(26,115,232,0.3);">
+                                  🌐 Ver Reporte Completo
+                                </a>
+                              </td>
+                            </tr>
+                          </table>
+                          
+                          <!-- Nota informativa -->
+                          <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+                            <p style="color: #856404; font-size: 13px; margin: 0; line-height: 1.5;">
+                              <strong>📦 Nota:</strong> También puedes descargar los artefactos del reporte desde la sección de artefactos en GitHub Actions.
+                            </p>
+                          </div>
+                          
+                          <p style="color: #555555; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
+                            Saludos cordiales,<br>
+                            <strong style="color: #34a853;">Sistema Automático de QA</strong>
+                          </p>
+                        </td>
+                      </tr>
+                      
+                      <!-- Footer -->
+                      <tr>
+                        <td style="background-color: #f8f9fa; padding: 20px 30px; border-top: 1px solid #e0e0e0;">
+                          <p style="color: #999999; font-size: 12px; margin: 0; text-align: center;">
+                            GitHub Actions · Testing Continuo · ${{ steps.fecha_fin.outputs.year }}
+                          </p>
+                          <p style="color: #999999; font-size: 11px; margin: 10px 0 0 0; text-align: center;">
+                            <a href="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}" style="color: #1a73e8; text-decoration: none;">Ver Historial de Reportes</a>
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </body>
+            </html>

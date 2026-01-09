@@ -1,0 +1,197 @@
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│   ✅ PLATAFORMA KARATE DSL - CONFIGURACIÓN COMPLETA                         │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+📁 ARCHIVOS ACTUALIZADOS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ test-launcher.html
+   ├── 🎨 Título: "KARATE DSL - SIASIS API Testing"
+   ├── 🏷️ Tags: @dailyTests, @postLoginRol*, @misDatos, @security
+   ├── 🌍 Ambientes: QA, DEV
+   ├── ⚙️ Repo: MonoSama21/BE-frameworkbase-KarateDSL
+   ├── 📋 Workflow: karate-manual.yml
+   └── 🤖 ZeusBot: Actualizado con guías Karate DSL
+
+✅ README.md (NUEVO)
+   ├── 📖 Documentación completa del proyecto
+   ├── 🚀 3 formas de ejecutar pruebas
+   ├── 🏷️ Tabla de tags disponibles
+   ├── 📊 Información de reportes
+   └── 🔗 Links a documentación adicional
+
+✅ GUIA-RAPIDA.md (NUEVO)
+   ├── ⚡ Inicio en 3 pasos
+   ├── 🏷️ Lista de tags con tiempos estimados
+   ├── 📧 Formato de correos de notificación
+   ├── 🔧 Descripción de ambientes
+   └── 💡 Tips por rol (QA/DEV/Negocio)
+
+✅ PLATAFORMA-TESTING.md (NUEVO)
+   ├── 📚 Documentación técnica completa
+   ├── 🔒 Configuración de seguridad
+   ├── 🎨 Guía de personalización
+   ├── 🐛 Troubleshooting detallado
+   └── 📝 Changelog
+
+✅ DEPLOY-PLATAFORMA.md (NUEVO)
+   ├── 🌐 Proceso de despliegue automático
+   ├── 🛠️ Configuración manual de GitHub Pages
+   ├── 🔄 Actualización de la plataforma
+   └── 📊 Estructura de archivos en gh-pages
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 CONFIGURACIÓN DEL PROYECTO:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📦 Repositorio
+   ├── Owner:    MonoSama21
+   ├── Repo:     BE-frameworkbase-KarateDSL
+   └── Workflow: karate-manual.yml
+
+🌐 GitHub Pages
+   ├── URL:      https://MonoSama21.github.io/BE-frameworkbase-KarateDSL/
+   ├── Branch:   gh-pages
+   └── Deploy:   Automático con cada ejecución
+
+🏷️ Tags Disponibles
+   ├── @dailyTests                    (Suite completa - 10-15 min)
+   ├── @postLoginRolAuxiliar          (Login auxiliar - 2-3 min)
+   ├── @postLoginRolDirectivo         (Login directivo - 2-3 min)
+   ├── @postLoginRolProfesorPrimaria  (Login profesor primaria - 2-3 min)
+   ├── @postLoginRolProfesorSecundaria (Login profesor secundaria - 2-3 min)
+   ├── @postLoginRolTutorSecundaria   (Login tutor - 2-3 min)
+   ├── @misDatos                      (Datos de usuario - 5-7 min)
+   └── @security                      (Seguridad - 3-5 min)
+
+🌍 Ambientes
+   ├── QA  (Ambiente de calidad - Recomendado)
+   └── DEV (Ambiente de desarrollo)
+
+📧 Notificaciones
+   ├── Correo de inicio: 🔵 Confirmación de ejecución
+   └── Correo de fin:    🟢 Resultados + tabla + links
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 SIGUIENTES PASOS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣  CONFIGURAR GITHUB PAGES (Primera vez)
+   └─ Sigue las instrucciones en: DEPLOY-PLATAFORMA.md
+
+2️⃣  CONFIGURAR SECRETS (Para notificaciones)
+   ├─ MAIL_SERVER   (ej: smtp.gmail.com)
+   ├─ MAIL_PORT     (ej: 587)
+   ├─ MAIL_USERNAME (ej: tu-correo@gmail.com)
+   └─ MAIL_PASSWORD (ej: contraseña de aplicación)
+
+3️⃣  OBTENER GITHUB TOKEN
+   └─ https://github.com/settings/tokens/new?scopes=repo,workflow
+
+4️⃣  EJECUTAR PRIMERA PRUEBA
+   ├─ Opción A: Desde la plataforma web ⭐ RECOMENDADO
+   │  └─ https://MonoSama21.github.io/BE-frameworkbase-KarateDSL/
+   │
+   ├─ Opción B: Desde GitHub Actions
+   │  └─ https://github.com/MonoSama21/BE-frameworkbase-KarateDSL/actions
+   │
+   └─ Opción C: Desde línea de comandos
+      └─ mvn test -Dkarate.options="--tags @dailyTests" -Dkarate.env=QA
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎓 RECURSOS DE APRENDIZAJE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📖 Documentación del Proyecto
+   ├─ README.md              → Visión general + setup completo
+   ├─ GUIA-RAPIDA.md        → Inicio rápido en 3 pasos
+   ├─ PLATAFORMA-TESTING.md → Guía completa de la plataforma
+   └─ DEPLOY-PLATAFORMA.md  → Deploy y configuración
+
+🤖 Asistente ZeusBot
+   └─ Click en 🐰 en la plataforma web para ayuda contextual
+
+🌐 Documentación Externa
+   ├─ Karate DSL:         https://github.com/karatelabs/karate
+   ├─ GitHub Actions:     https://docs.github.com/actions
+   └─ GitHub Pages:       https://docs.github.com/pages
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔄 EJECUCIONES PROGRAMADAS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⏰ Lunes a Viernes
+   ├─ Hora:     8:00 AM (Perú - UTC-5)
+   ├─ Tag:      @dailyTests
+   ├─ Ambiente: QA
+   └─ Correo:   2101010261@undc.edu.pe
+
+⏰ Sábados y Domingos
+   ├─ Hora:     10:00 AM (Perú - UTC-5)
+   ├─ Tag:      @postLoginRolAuxiliar
+   ├─ Ambiente: QA
+   └─ Correo:   2101010261@undc.edu.pe
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✨ CARACTERÍSTICAS DESTACADAS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎨 Interfaz Visual
+   ├─ Formulario con validación en tiempo real
+   ├─ Tags preconfigurados (un click)
+   ├─ Selección de ambiente (QA/DEV)
+   └─ Diseño responsive (funciona en móviles)
+
+🤖 Asistente ZeusBot
+   ├─ Guías personalizadas por rol
+   ├─ QA: Tips de testing y reportes
+   ├─ DEV: Validación de APIs y debugging
+   ├─ Negocio: Explicaciones sin tecnicismos
+   └─ Técnico: Arquitectura y configuración
+
+📊 Historial Completo
+   ├─ Visualización de todas las ejecuciones
+   ├─ Filtros por estado (passed/failed)
+   ├─ Estadísticas (total/exitosas/fallidas)
+   └─ Links directos a reportes y GitHub Actions
+
+📧 Notificaciones Inteligentes
+   ├─ Email de inicio con confirmación
+   ├─ Email de fin con tabla de resultados
+   ├─ Links a reportes HTML interactivos
+   └─ Plantillas HTML profesionales
+
+🔐 Seguridad
+   ├─ Token almacenado en localStorage (no en servidor)
+   ├─ Validación de formato de token
+   ├─ Scopes mínimos necesarios
+   └─ Guías de generación de tokens
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📞 CONTACTO Y SOPORTE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+👤 QA Automation SSr:  Yrvin Pachas
+📧 Email:              2101010261@undc.edu.pe
+🏢 Proyecto:           SIASIS - Sistema Académico
+📅 Fecha:              08 de Enero 2026
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎉 ¡CONFIGURACIÓN COMPLETA!
+
+Tu plataforma de testing Karate DSL está lista para usar.
+
+Próximo paso: Abre la plataforma web y ejecuta tu primera prueba 🚀
+
+   https://MonoSama21.github.io/BE-frameworkbase-KarateDSL/
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

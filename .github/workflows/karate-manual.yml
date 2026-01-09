@@ -191,8 +191,8 @@ jobs:
           > /tmp/scenarios_list.txt
           > /tmp/scenarios_html.txt
           
-          # Buscar el archivo JSON de Karate (fuente principal)
-          JSON_FILE=$(find target -name "karate-summary-json.txt" -o -name "karate-summary.json" | head -n 1)
+          # Buscar el archivo JSON de Karate (para estadísticas globales)
+          JSON_FILE=$(find target -name "karate-summary-json.txt" | head -n 1)
           
           if [ -n "$JSON_FILE" ] && [ -f "$JSON_FILE" ]; then
             echo "📄 Usando archivo JSON de Karate: $JSON_FILE"
@@ -208,42 +208,24 @@ jobs:
             echo "⏭️ SKIPPED: $SKIPPED"
             echo "📝 TOTAL: $TOTAL"
             
-            # Extraer detalles de features desde el JSON
-            echo "📝 Extrayendo detalles desde featureSummary..."
+            # Extraer detalles de CADA ESCENARIO desde los archivos .karate-json.txt individuales
+            echo "📝 Extrayendo nombres de escenarios desde archivos .karate-json.txt..."
             
-            # Procesar cada feature en el resumen
-            jq -r '.featureSummary[] | "\(.name)|\(.failed)|\(.passedCount)|\(.failedCount)"' "$JSON_FILE" 2>/dev/null | while IFS='|' read -r name failed passed_count failed_count; do
-              if [ -n "$name" ] && [ "$name" != "null" ]; then
-                # Si el feature pasó, agregar sus escenarios como passed
-                if [ "$failed" = "false" ]; then
-                  for i in $(seq 1 $passed_count); do
-                    scenario_name="$name"
-                    [ "$passed_count" -gt 1 ] && scenario_name="$name [caso $i]"
-                    echo "- ✅ **PASSED**: $scenario_name" >> /tmp/scenarios_list.txt
-                    echo "<tr><td style='border: 1px solid #ddd; padding: 10px;'><span style='color:green; font-weight: bold;'>✅ PASSED</span></td><td style='border: 1px solid #ddd; padding: 10px;'>$scenario_name</td></tr>" >> /tmp/scenarios_html.txt
-                  done
-                fi
-                
-                # Si el feature falló, agregar sus escenarios como failed
-                if [ "$failed" = "true" ]; then
-                  for i in $(seq 1 $failed_count); do
-                    scenario_name="$name"
-                    [ "$failed_count" -gt 1 ] && scenario_name="$name [caso $i]"
+            for json_file in $(find "$REPORT_DIR" -type f -name "*.karate-json.txt"); do
+              echo "  📄 Procesando: $(basename "$json_file")"
+              
+              # Extraer todos los scenarioResults de este feature
+              jq -r '.scenarioResults[] | "\(.name)|\(.failed)"' "$json_file" 2>/dev/null | while IFS='|' read -r scenario_name is_failed; do
+                if [ -n "$scenario_name" ] && [ "$scenario_name" != "null" ]; then
+                  if [ "$is_failed" = "true" ]; then
                     echo "- ❌ **FAILED**: $scenario_name" >> /tmp/scenarios_list.txt
                     echo "<tr><td style='border: 1px solid #ddd; padding: 10px;'><span style='color:red; font-weight: bold;'>❌ FAILED</span></td><td style='border: 1px solid #ddd; padding: 10px;'>$scenario_name</td></tr>" >> /tmp/scenarios_html.txt
-                  done
-                  
-                  # También agregar los passed de este feature si los hay
-                  if [ "$passed_count" -gt 0 ]; then
-                    for i in $(seq 1 $passed_count); do
-                      scenario_name="$name"
-                      [ "$passed_count" -gt 1 ] && scenario_name="$name [caso $i]"
-                      echo "- ✅ **PASSED**: $scenario_name" >> /tmp/scenarios_list.txt
-                      echo "<tr><td style='border: 1px solid #ddd; padding: 10px;'><span style='color:green; font-weight: bold;'>✅ PASSED</span></td><td style='border: 1px solid #ddd; padding: 10px;'>$scenario_name</td></tr>" >> /tmp/scenarios_html.txt
-                    done
+                  else
+                    echo "- ✅ **PASSED**: $scenario_name" >> /tmp/scenarios_list.txt
+                    echo "<tr><td style='border: 1px solid #ddd; padding: 10px;'><span style='color:green; font-weight: bold;'>✅ PASSED</span></td><td style='border: 1px solid #ddd; padding: 10px;'>$scenario_name</td></tr>" >> /tmp/scenarios_html.txt
                   fi
                 fi
-              fi
+              done
             done
             
           else

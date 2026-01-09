@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reportes Karate - Historial</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+    h1, h2 { color: #1a73e8; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    .stats, .executor-panel { 
+      background: white; 
+      padding: 20px; 
+      border-radius: 5px; 
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .executor-panel { background: #e8f5e9; border-left: 4px solid #34a853; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { 
+      display: block; 
+      margin-bottom: 5px; 
+      font-weight: bold; 
+      color: #333;
+    }
+    .form-group input, .form-group select { 
+      width: 100%; 
+      padding: 10px; 
+      border: 1px solid #ddd; 
+      border-radius: 4px; 
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    .form-group input:focus, .form-group select:focus {
+      outline: none;
+      border-color: #1a73e8;
+    }
+    .btn-execute { 
+      background: #1a73e8; 
+      color: white; 
+      padding: 12px 24px; 
+      border: none; 
+      border-radius: 4px; 
+      cursor: pointer; 
+      font-size: 16px;
+      font-weight: bold;
+      width: 100%;
+    }
+    .btn-execute:hover { background: #1557b0; }
+    .btn-execute:disabled { background: #ccc; cursor: not-allowed; }
+    .message { 
+      padding: 12px; 
+      border-radius: 4px; 
+      margin-top: 15px; 
+      display: none;
+    }
+    .message.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .message.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    .message.show { display: block; }
+    .report-list { list-style: none; padding: 0; }
+    .report-item { 
+      background: white; 
+      padding: 15px; 
+      margin: 10px 0; 
+      border-radius: 5px; 
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .report-link { 
+      color: #1a73e8; 
+      text-decoration: none; 
+      font-size: 18px; 
+      font-weight: bold;
+    }
+    .report-link:hover { text-decoration: underline; }
+    .report-date { color: #666; font-size: 14px; margin-top: 5px; }
+    .badge { 
+      display: inline-block; 
+      padding: 3px 8px; 
+      border-radius: 3px; 
+      font-size: 12px; 
+      margin-left: 10px;
+    }
+    .badge-new { background: #34a853; color: white; }
+    .info-text { color: #666; font-size: 13px; margin-top: 5px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📊 Historial de Reportes Karate</h1>
+    
+    <!-- Panel de ejecución -->
+    <div class="executor-panel">
+      <h2>🚀 Ejecutar Nuevas Pruebas</h2>
+      <form id="executionForm">
+        <div class="form-group">
+          <label for="githubToken">GitHub Token (PAT)</label>
+          <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" required>
+          <p class="info-text">Necesitas un Personal Access Token con permiso 'workflow'. <a href="https://github.com/settings/tokens/new?scopes=workflow" target="_blank">Crear token</a></p>
+        </div>
+        
+        <div class="form-group">
+          <label for="tag">Tag a ejecutar</label>
+          <input type="text" id="tag" placeholder="@postLoginRolDirectivo" required>
+          <p class="info-text">Ejemplo: @postLoginRolDirectivo, @security, @smoke</p>
+        </div>
+        
+        <div class="form-group">
+          <label for="ambiente">Ambiente</label>
+          <select id="ambiente" required>
+            <option value="QA" selected>QA</option>
+            <option value="DEV">DEV</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="correo">Correo de notificación</label>
+          <input type="email" id="correo" placeholder="tu-correo@ejemplo.com" value="2101010261@undc.edu.pe" required>
+        </div>
+        
+        <button type="submit" class="btn-execute" id="btnExecute">
+          ▶️ Ejecutar Pruebas
+        </button>
+        
+        <div id="message" class="message"></div>
+      </form>
+    </div>
+    
+    <div class="stats">
+      <p><strong>Último reporte generado:</strong> Run #1</p>
+      <p><strong>Tag:</strong> @postLoginRolAuxiliar</p>
+      <p><strong>Ambiente:</strong> QA</p>
+      <p><strong>Fecha:</strong> 2026-01-09 00:08:48</p>
+    </div>
+    
+    <h2>📋 Historial de Ejecuciones</h2>
+    <ul class="report-list">
+      <li class="report-item">
+        <a class="report-link" href="reports/1/karate-summary.html">
+          📄 Reporte #1 - Tag: @postLoginRolAuxiliar
+        </a>
+        <span class="badge badge-new">NUEVO</span>
+        <div class="report-date">Ambiente: QA | Fecha: 2026-01-09 00:08:48</div>
+      </li>
+    </ul>
+  </div>
+  
+  <!-- Modal de confirmación -->
+  <div id="confirmModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+    <div style="background:white; padding:30px; border-radius:8px; max-width:500px; text-align:center; box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+      <h3 style="color:#1a73e8; margin-top:0;">🚀 Confirmar Ejecución</h3>
+      <p style="font-size:16px; color:#333; line-height:1.6;">
+        Las pruebas se ejecutarán en segundo plano y recibirás una notificación en tu correo <strong id="modalEmail"></strong> cuando finalicen.
+      </p>
+      <p style="font-size:14px; color:#666; margin-top:10px;">
+        Tag: <strong id="modalTag"></strong> | Ambiente: <strong id="modalAmbiente"></strong>
+      </p>
+      <div style="margin-top:25px; display:flex; gap:10px; justify-content:center;">
+        <button onclick="cancelExecution()" style="background:#666; color:white; padding:10px 20px; border:none; border-radius:4px; cursor:pointer; font-size:14px;">
+          Cancelar
+        </button>
+        <button onclick="confirmExecution()" style="background:#1a73e8; color:white; padding:10px 20px; border:none; border-radius:4px; cursor:pointer; font-size:14px; font-weight:bold;">
+          ✓ Confirmar y Ejecutar
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    const form = document.getElementById('executionForm');
+    const btnExecute = document.getElementById('btnExecute');
+    const message = document.getElementById('message');
+    const confirmModal = document.getElementById('confirmModal');
+    let formData = {};
+    
+    // Validación de campos
+    function validateForm() {
+      const token = document.getElementById('githubToken').value.trim();
+      const tag = document.getElementById('tag').value.trim();
+      const correo = document.getElementById('correo').value.trim();
+      
+      // Validar token
+      if (!token) {
+        showError('⚠️ Por favor ingresa tu GitHub Token');
+        return false;
+      }
+      
+      if (!token.startsWith('ghp_') && !token.startsWith('github_pat_')) {
+        showError('⚠️ El token debe comenzar con "ghp_" o "github_pat_"');
+        return false;
+      }
+      
+      if (token.length < 40) {
+        showError('⚠️ El token parece ser demasiado corto. Verifica que sea correcto.');
+        return false;
+      }
+      
+      // Validar tag
+      if (!tag) {
+        showError('⚠️ Por favor ingresa un tag para ejecutar');
+        return false;
+      }
+      
+      if (!tag.startsWith('@')) {
+        showError('⚠️ El tag debe comenzar con @ (ejemplo: @postLoginRolDirectivo)');
+        return false;
+      }
+      
+      // Validar correo
+      if (!correo) {
+        showError('⚠️ Por favor ingresa un correo electrónico');
+        return false;
+      }
+      
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(correo)) {
+        showError('⚠️ Por favor ingresa un correo electrónico válido');
+        return false;
+      }
+      
+      return true;
+    }
+    
+    function showError(msg) {
+      message.className = 'message error show';
+      message.textContent = msg;
+      setTimeout(() => {
+        message.className = 'message';
+      }, 5000);
+    }
+    
+    function showConfirmModal() {
+      document.getElementById('modalEmail').textContent = formData.correo;
+      document.getElementById('modalTag').textContent = formData.tag;
+      document.getElementById('modalAmbiente').textContent = formData.ambiente;
+      confirmModal.style.display = 'flex';
+    }
+    
+    function cancelExecution() {
+      confirmModal.style.display = 'none';
+      formData = {};
+    }
+    
+    async function confirmExecution() {
+      confirmModal.style.display = 'none';
+      
+      // Deshabilitar botón y mostrar loading
+      btnExecute.disabled = true;
+      btnExecute.textContent = '⏳ Ejecutando...';
+      message.className = 'message';
+      message.style.display = 'none';
+      
+      try {
+        const response = await fetch('https://api.github.com/repos/MonoSama21/BE-frameworkbase-KarateDSL/actions/workflows/karate-manual.yml/dispatches', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/vnd.github.v3+json',
+            'Authorization': 'token ' + formData.token,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            ref: 'main',
+            inputs: {
+              tag: formData.tag,
+              ambiente: formData.ambiente,
+              correo: formData.correo
+            }
+          })
+        });
+        
+        if (response.status === 204) {
+          message.className = 'message success show';
+          message.textContent = '✅ Pruebas iniciadas correctamente. Recibirás una notificación por correo cuando finalicen.';
+          form.reset();
+          document.getElementById('correo').value = '2101010261@undc.edu.pe';
+          
+          // Recargar página después de 3 segundos
+          setTimeout(() => {
+            window.location.reload();
+          }, 3000);
+        } else {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Error desconocido');
+        }
+      } catch (error) {
+        message.className = 'message error show';
+        message.textContent = '❌ Error al ejecutar las pruebas: ' + error.message + '. Verifica tu token y permisos.';
+      } finally {
+        btnExecute.disabled = false;
+        btnExecute.textContent = '▶️ Ejecutar Pruebas';
+        formData = {};
+      }
+    }
+    
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      // Validar formulario
+      if (!validateForm()) {
+        return;
+      }
+      
+      // Guardar datos del formulario
+      formData = {
+        token: document.getElementById('githubToken').value.trim(),
+        tag: document.getElementById('tag').value.trim(),
+        ambiente: document.getElementById('ambiente').value,
+        correo: document.getElementById('correo').value.trim()
+      };
+      
+      // Mostrar modal de confirmación
+      showConfirmModal();
+    });
+  </script>
+</body>
+</html>

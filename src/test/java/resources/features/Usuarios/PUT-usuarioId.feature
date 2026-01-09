@@ -144,10 +144,10 @@ Scenario Outline: Validar <descripcion>
     When method PUT
     Then status <expectedStatus>
 
-Examples:
-    | descripcion                                                          | request                                                                                   | expectedStatus |
-    | que nombre con tipo number es rechazado                             | { "nome": 123, "email": "test@test.com", "password": "test", "administrador": "true" }   | 400            |
-    | que password con tipo number es rechazado                           | { "nome": "Test", "email": "test@test.com", "password": 123, "administrador": "true" }   | 400            |
+    Examples:
+        | descripcion                                                          | request                                                                                 | expectedStatus |
+        | que nombre con tipo number es rechazado                             | { "nome": 123, "email": "test@test.com", "password": "test", "administrador": "true" }   | 400            |
+        | que password con tipo number es rechazado                           | { "nome": "Test", "email": "test@test.com", "password": 123, "administrador": "true" }   | 400            |
 
 # =======================================================================
 # 8. ⚡ BOUNDARY TESTING - Valores límite y edge cases

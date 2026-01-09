@@ -65,17 +65,17 @@ Scenario: Validar que la búsqueda con ID inexistente retorna error 400
     When method GET
     Then status 400
     And match response == schemas['400_usuario_nao_encontrado']
-    
+
 @contract @error-handling @get @Escenario07
 Scenario Outline: Validar <descripcion>
     Given path "usuarios", '<userId>'
     When method GET
     Then status <expectedStatus>
 
-Examples:
-    | descripcion                                                      | userId              | expectedStatus |
-    | que un ID con formato inválido retorna error 400                | abc123xyz           | 400            |
-    | que un ID con caracteres especiales retorna error 400            | @#$%&*              | 400            |
+    Examples:
+        | descripcion                                                      | userId              | expectedStatus |
+        | que un ID con formato inválido retorna error 400                 | abc123xyz           | 400            |
+        | que un ID con caracteres especiales retorna error 400            | @#$%&*              | 400            |
 
 # =======================================================================
 # 6. 📝 FIELD VALIDATION - Campos obligatorios

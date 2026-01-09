@@ -5,12 +5,12 @@ function fn() {
   var ENV = {
     DEV: {
       api: {
-        urlBase: "URL"
+        urlBase: "https://serverest.dev/"
       }
     },
     QA: {
       api: {
-        urlBase: "https://api01-siasis-dev.vercel.app"
+        urlBase: "https://serverest.dev/"
       }
     }
   };

@@ -197,9 +197,9 @@ jobs:
           if [ -n "$JSON_FILE" ] && [ -f "$JSON_FILE" ]; then
             echo "📄 Usando archivo JSON de Karate: $JSON_FILE"
             
-            # Extraer estadísticas del JSON
+            # Extraer estadísticas del JSON (OJO: Karate usa scenariosfailed en minúsculas)
             PASSED=$(jq -r '.scenariosPassed // 0' "$JSON_FILE" 2>/dev/null || echo "0")
-            FAILED=$(jq -r '.scenariosFailed // 0' "$JSON_FILE" 2>/dev/null || echo "0")
+            FAILED=$(jq -r '.scenariosfailed // 0' "$JSON_FILE" 2>/dev/null || echo "0")
             SKIPPED=0
             TOTAL=$((PASSED + FAILED + SKIPPED))
             
@@ -208,43 +208,43 @@ jobs:
             echo "⏭️ SKIPPED: $SKIPPED"
             echo "📝 TOTAL: $TOTAL"
             
-            # Extraer detalles de escenarios desde el JSON si están disponibles
-            if jq -e '.featureSummary' "$JSON_FILE" > /dev/null 2>&1; then
-              echo "📝 Extrayendo detalles de escenarios desde JSON..."
-              
-              jq -r '.featureSummary[] | .scenarioResults[] | "\(.scenario.name)|\(.scenario.refId)|\(if .failed then "failed" else "passed" end)"' "$JSON_FILE" 2>/dev/null | while IFS='|' read -r name refid status; do
-                if [ -n "$name" ] && [ "$name" != "null" ]; then
-                  case "$status" in
-                    "passed")
-                      echo "- ✅ **PASSED**: $name" >> /tmp/scenarios_list.txt
-                      echo "<tr><td style='border: 1px solid #ddd; padding: 10px;'><span style='color:green; font-weight: bold;'>✅ PASSED</span></td><td style='border: 1px solid #ddd; padding: 10px;'>$name</td></tr>" >> /tmp/scenarios_html.txt
-                      ;;
-                    "failed")
-                      echo "- ❌ **FAILED**: $name" >> /tmp/scenarios_list.txt
-                      echo "<tr><td style='border: 1px solid #ddd; padding: 10px;'><span style='color:red; font-weight: bold;'>❌ FAILED</span></td><td style='border: 1px solid #ddd; padding: 10px;'>$name</td></tr>" >> /tmp/scenarios_html.txt
-                      ;;
-                  esac
-                fi
-              done
-            fi
+            # Extraer detalles de features desde el JSON
+            echo "📝 Extrayendo detalles desde featureSummary..."
             
-            # Si no se pudo extraer desde featureSummary, intentar con otro formato
-            if [ ! -s /tmp/scenarios_html.txt ]; then
-              echo "📋 Intentando extracción alternativa desde reportes HTML..."
-              
-              for f in $(find "$REPORT_DIR" -type f -name "*.html" ! -name "karate-summary.html" ! -name "karate-tags.html" ! -name "karate-timeline.html"); do
-                # Buscar patrones más flexibles en el HTML
-                grep -oP 'id=".*?" class="(passed|failed)".*?<span.*?>\K[^<]+' "$f" 2>/dev/null | while read -r name; do
-                  if [ -n "$name" ]; then
-                    # Determinar estado del contexto
-                    if grep -q "class=\"passed\"" <<< "$f"; then
-                      echo "- ✅ **PASSED**: $name" >> /tmp/scenarios_list.txt
-                      echo "<tr><td style='border: 1px solid #ddd; padding: 10px;'><span style='color:green; font-weight: bold;'>✅ PASSED</span></td><td style='border: 1px solid #ddd; padding: 10px;'>$name</td></tr>" >> /tmp/scenarios_html.txt
-                    fi
+            # Procesar cada feature en el resumen
+            jq -r '.featureSummary[] | "\(.name)|\(.failed)|\(.passedCount)|\(.failedCount)"' "$JSON_FILE" 2>/dev/null | while IFS='|' read -r name failed passed_count failed_count; do
+              if [ -n "$name" ] && [ "$name" != "null" ]; then
+                # Si el feature pasó, agregar sus escenarios como passed
+                if [ "$failed" = "false" ]; then
+                  for i in $(seq 1 $passed_count); do
+                    scenario_name="$name"
+                    [ "$passed_count" -gt 1 ] && scenario_name="$name [caso $i]"
+                    echo "- ✅ **PASSED**: $scenario_name" >> /tmp/scenarios_list.txt
+                    echo "<tr><td style='border: 1px solid #ddd; padding: 10px;'><span style='color:green; font-weight: bold;'>✅ PASSED</span></td><td style='border: 1px solid #ddd; padding: 10px;'>$scenario_name</td></tr>" >> /tmp/scenarios_html.txt
+                  done
+                fi
+                
+                # Si el feature falló, agregar sus escenarios como failed
+                if [ "$failed" = "true" ]; then
+                  for i in $(seq 1 $failed_count); do
+                    scenario_name="$name"
+                    [ "$failed_count" -gt 1 ] && scenario_name="$name [caso $i]"
+                    echo "- ❌ **FAILED**: $scenario_name" >> /tmp/scenarios_list.txt
+                    echo "<tr><td style='border: 1px solid #ddd; padding: 10px;'><span style='color:red; font-weight: bold;'>❌ FAILED</span></td><td style='border: 1px solid #ddd; padding: 10px;'>$scenario_name</td></tr>" >> /tmp/scenarios_html.txt
+                  done
+                  
+                  # También agregar los passed de este feature si los hay
+                  if [ "$passed_count" -gt 0 ]; then
+                    for i in $(seq 1 $passed_count); do
+                      scenario_name="$name"
+                      [ "$passed_count" -gt 1 ] && scenario_name="$name [caso $i]"
+                      echo "- ✅ **PASSED**: $scenario_name" >> /tmp/scenarios_list.txt
+                      echo "<tr><td style='border: 1px solid #ddd; padding: 10px;'><span style='color:green; font-weight: bold;'>✅ PASSED</span></td><td style='border: 1px solid #ddd; padding: 10px;'>$scenario_name</td></tr>" >> /tmp/scenarios_html.txt
+                    done
                   fi
-                done
-              done
-            fi
+                fi
+              fi
+            done
             
           else
             echo "⚠️ No se encontró archivo JSON de Karate"
@@ -254,11 +254,10 @@ jobs:
             TOTAL=0
           fi
           
-          # Si aún no hay escenarios, crear mensaje informativo genérico
+          # Si aún no hay escenarios en los archivos temporales, usar fallback
           if [ ! -s /tmp/scenarios_html.txt ]; then
-            echo "📊 Generando resumen basado en estadísticas globales..."
+            echo "📊 Generando resumen basado en estadísticas globales (fallback)..."
             
-            # Crear lista genérica basada en contadores
             if [ "$PASSED" -gt 0 ]; then
               for i in $(seq 1 $PASSED); do
                 echo "- ✅ **PASSED**: Escenario #$i" >> /tmp/scenarios_list.txt

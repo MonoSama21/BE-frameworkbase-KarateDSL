@@ -185,69 +185,98 @@ jobs:
         REPORT_DIR="target/karate-reports"
         
         if [ -d "$REPORT_DIR" ]; then
-          echo "📋 Generando estadísticas desde reportes HTML..."
-          
-          # Contadores
-          PASSED=0
-          FAILED=0
-          SKIPPED=0
+          echo "📋 Generando estadísticas desde reportes Karate..."
           
           # Archivos temporales
           > /tmp/scenarios_list.txt
           > /tmp/scenarios_html.txt
           
-          # Buscar todos los HTML de Karate
-          for f in $(find "$REPORT_DIR" -type f -name "*.html" ! -name "karate-summary.html" ! -name "karate-tags.html" ! -name "karate-timeline.html"); do
-            
-            # Extraer nombres de escenarios
-            sed -n 's/.*<span class="scenario-name">\(.*\)<\/span>.*/\1/p' "$f" > /tmp/names.txt 2>/dev/null || true
-            
-            # Extraer estado (passed/failed) desde las clases CSS
-            sed -n 's/.*<td class="scenario-time \(passed\|failed\).*/\1/p' "$f" > /tmp/status.txt 2>/dev/null || true
-            
-            # Combinar ambas listas
-            paste -d'|' /tmp/names.txt /tmp/status.txt 2>/dev/null | while IFS='|' read -r name status; do
-              if [ -n "$name" ] && [ "$name" != "null" ]; then
-                case "$status" in
-                  "passed")
-                    ((PASSED++))
-                    echo "- ✅ **PASSED**: $name" >> /tmp/scenarios_list.txt
-                    echo "<tr><td style='border: 1px solid #ddd; padding: 10px;'><span style='color:green; font-weight: bold;'>✅ PASSED</span></td><td style='border: 1px solid #ddd; padding: 10px;'>$name</td></tr>" >> /tmp/scenarios_html.txt
-                    ;;
-                  "failed")
-                    ((FAILED++))
-                    echo "- ❌ **FAILED**: $name" >> /tmp/scenarios_list.txt
-                    echo "<tr><td style='border: 1px solid #ddd; padding: 10px;'><span style='color:red; font-weight: bold;'>❌ FAILED</span></td><td style='border: 1px solid #ddd; padding: 10px;'>$name</td></tr>" >> /tmp/scenarios_html.txt
-                    ;;
-                esac
-              fi
-            done
-          done
-          
-          # Intentar también desde karate-summary-json.txt si existe
+          # Buscar el archivo JSON de Karate (fuente principal)
           JSON_FILE=$(find target -name "karate-summary-json.txt" -o -name "karate-summary.json" | head -n 1)
-          if [ -n "$JSON_FILE" ]; then
-            echo "📄 Encontrado archivo JSON: $JSON_FILE"
-            PASSED_JSON=$(jq -r '.scenariosPassed // 0' "$JSON_FILE" 2>/dev/null || echo "0")
-            FAILED_JSON=$(jq -r '.scenariosFailed // 0' "$JSON_FILE" 2>/dev/null || echo "0")
+          
+          if [ -n "$JSON_FILE" ] && [ -f "$JSON_FILE" ]; then
+            echo "📄 Usando archivo JSON de Karate: $JSON_FILE"
             
-            # Usar valores del JSON si son mayores
-            [ "$PASSED_JSON" -gt "$PASSED" ] && PASSED=$PASSED_JSON
-            [ "$FAILED_JSON" -gt "$FAILED" ] && FAILED=$FAILED_JSON
+            # Extraer estadísticas del JSON
+            PASSED=$(jq -r '.scenariosPassed // 0' "$JSON_FILE" 2>/dev/null || echo "0")
+            FAILED=$(jq -r '.scenariosFailed // 0' "$JSON_FILE" 2>/dev/null || echo "0")
+            SKIPPED=0
+            TOTAL=$((PASSED + FAILED + SKIPPED))
+            
+            echo "✅ PASSED: $PASSED"
+            echo "❌ FAILED: $FAILED"
+            echo "⏭️ SKIPPED: $SKIPPED"
+            echo "📝 TOTAL: $TOTAL"
+            
+            # Extraer detalles de escenarios desde el JSON si están disponibles
+            if jq -e '.featureSummary' "$JSON_FILE" > /dev/null 2>&1; then
+              echo "📝 Extrayendo detalles de escenarios desde JSON..."
+              
+              jq -r '.featureSummary[] | .scenarioResults[] | "\(.scenario.name)|\(.scenario.refId)|\(if .failed then "failed" else "passed" end)"' "$JSON_FILE" 2>/dev/null | while IFS='|' read -r name refid status; do
+                if [ -n "$name" ] && [ "$name" != "null" ]; then
+                  case "$status" in
+                    "passed")
+                      echo "- ✅ **PASSED**: $name" >> /tmp/scenarios_list.txt
+                      echo "<tr><td style='border: 1px solid #ddd; padding: 10px;'><span style='color:green; font-weight: bold;'>✅ PASSED</span></td><td style='border: 1px solid #ddd; padding: 10px;'>$name</td></tr>" >> /tmp/scenarios_html.txt
+                      ;;
+                    "failed")
+                      echo "- ❌ **FAILED**: $name" >> /tmp/scenarios_list.txt
+                      echo "<tr><td style='border: 1px solid #ddd; padding: 10px;'><span style='color:red; font-weight: bold;'>❌ FAILED</span></td><td style='border: 1px solid #ddd; padding: 10px;'>$name</td></tr>" >> /tmp/scenarios_html.txt
+                      ;;
+                  esac
+                fi
+              done
+            fi
+            
+            # Si no se pudo extraer desde featureSummary, intentar con otro formato
+            if [ ! -s /tmp/scenarios_html.txt ]; then
+              echo "📋 Intentando extracción alternativa desde reportes HTML..."
+              
+              for f in $(find "$REPORT_DIR" -type f -name "*.html" ! -name "karate-summary.html" ! -name "karate-tags.html" ! -name "karate-timeline.html"); do
+                # Buscar patrones más flexibles en el HTML
+                grep -oP 'id=".*?" class="(passed|failed)".*?<span.*?>\K[^<]+' "$f" 2>/dev/null | while read -r name; do
+                  if [ -n "$name" ]; then
+                    # Determinar estado del contexto
+                    if grep -q "class=\"passed\"" <<< "$f"; then
+                      echo "- ✅ **PASSED**: $name" >> /tmp/scenarios_list.txt
+                      echo "<tr><td style='border: 1px solid #ddd; padding: 10px;'><span style='color:green; font-weight: bold;'>✅ PASSED</span></td><td style='border: 1px solid #ddd; padding: 10px;'>$name</td></tr>" >> /tmp/scenarios_html.txt
+                    fi
+                  fi
+                done
+              done
+            fi
+            
+          else
+            echo "⚠️ No se encontró archivo JSON de Karate"
+            PASSED=0
+            FAILED=0
+            SKIPPED=0
+            TOTAL=0
           fi
           
-          TOTAL=$((PASSED + FAILED + SKIPPED))
-          
-          echo "✅ PASSED: $PASSED"
-          echo "❌ FAILED: $FAILED"
-          echo "⏭️ SKIPPED: $SKIPPED"
-          echo "📝 TOTAL: $TOTAL"
-          
-          # Verificar si se capturaron escenarios
+          # Si aún no hay escenarios, crear mensaje informativo genérico
           if [ ! -s /tmp/scenarios_html.txt ]; then
-            echo "⚠️ No se pudieron extraer escenarios desde HTML"
-            echo "<tr><td colspan='2' style='border: 1px solid #ddd; padding: 10px; text-align: center; color: orange;'>⚠️ No se pudieron extraer los nombres de los escenarios</td></tr>" > /tmp/scenarios_html.txt
-            echo "- ⚠️ No se pudieron extraer los nombres de los escenarios" > /tmp/scenarios_list.txt
+            echo "📊 Generando resumen basado en estadísticas globales..."
+            
+            # Crear lista genérica basada en contadores
+            if [ "$PASSED" -gt 0 ]; then
+              for i in $(seq 1 $PASSED); do
+                echo "- ✅ **PASSED**: Escenario #$i" >> /tmp/scenarios_list.txt
+                echo "<tr><td style='border: 1px solid #ddd; padding: 10px;'><span style='color:green; font-weight: bold;'>✅ PASSED</span></td><td style='border: 1px solid #ddd; padding: 10px;'>Escenario #$i</td></tr>" >> /tmp/scenarios_html.txt
+              done
+            fi
+            
+            if [ "$FAILED" -gt 0 ]; then
+              for i in $(seq 1 $FAILED); do
+                echo "- ❌ **FAILED**: Escenario #$i" >> /tmp/scenarios_list.txt
+                echo "<tr><td style='border: 1px solid #ddd; padding: 10px;'><span style='color:red; font-weight: bold;'>❌ FAILED</span></td><td style='border: 1px solid #ddd; padding: 10px;'>Escenario #$i</td></tr>" >> /tmp/scenarios_html.txt
+              done
+            fi
+            
+            if [ "$TOTAL" -eq 0 ]; then
+              echo "<tr><td colspan='2' style='border: 1px solid #ddd; padding: 10px; text-align: center; color: orange;'>ℹ️ Ver detalles completos en el reporte HTML</td></tr>" > /tmp/scenarios_html.txt
+              echo "- ℹ️ Ver detalles completos en el reporte HTML" > /tmp/scenarios_list.txt
+            fi
           fi
           
           # Crear tabla de resumen HTML

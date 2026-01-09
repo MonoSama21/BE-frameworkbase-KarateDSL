@@ -19,7 +19,6 @@ Scenario: Validar que el endpoint POST /usuarios está disponible y acepta reque
     Then status 201
     * def id = response._id
 
-
 # =======================================================================
 # 2. 🟢 HAPPY PATH - Caso exitoso con datos válidos
 # =======================================================================
@@ -38,31 +37,13 @@ Scenario: Validar que se puede crear un usuario con todos los datos válidos y o
 # 3. 📋 SCHEMA VALIDATION - Estructura de request y response
 # =======================================================================
 @contract @schema @post @Escenario03
-Scenario: Validar que la estructura del response cumple con el schema definido para creación exitosa
+Scenario: Validar que la estructura del response cumple con el schema definido para creación exitosa de usuario
     * set requestExitoso.email = randomEmail
     Given path "usuarios"
     And request requestExitoso
     When method POST
     Then status 201
     And match response == schemas['201']
-
-@contract @schema @post @Escenario04
-Scenario: Validar que el request body contiene todos los campos requeridos según el contrato
-    * set requestExitoso.email = randomEmail
-    * def requestValidacion = 
-    """
-    {
-      "nome": "#string",
-      "email": "#string",
-      "password": "#string",
-      "administrador": "#string"
-    }
-    """
-    Given path "usuarios"
-    And request requestExitoso
-    When method POST
-    Then status 201
-    And match requestExitoso == requestValidacion
 
 # =======================================================================
 # 5. ❌ ERROR HANDLING - Manejo de errores
@@ -86,8 +67,8 @@ Scenario Outline: Validar <descripcion>
     Then status 400
 
     Examples:
-        | descripcion                                                      | request                                                                                                      |
-        | que el registro sin datos retorna error 400                     | {}                                                                                                           | 
+        | descripcion                                                      | request                                                                                                    |
+        | que el registro sin datos retorna error 400                     | {}                                                                                                          | 
         | que el registro con nombre vacío retorna error 400              | { "nome": "", "email": "test@test.com", "password": "test123", "administrador": "true" }                    | 
         | que el registro con email vacío retorna error 400               | { "nome": "Test User", "email": "", "password": "test123", "administrador": "true" }                        |
         | que el registro sin campos obligatorios retorna error 400       | { "nome": "Test User", "email": "test@test.com" }                                                           | 

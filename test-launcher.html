@@ -927,23 +927,31 @@
         // LOAD HISTORY
         async function loadHistory() {
             try {
-                // Intentar cargar desde la misma ubicación (para testing local)
-                let response = await fetch('history.json');
+                console.log('🔄 Cargando historial...');
                 
-                // Si falla, intentar desde la URL completa de GitHub Pages
+                // Intentar desde la URL de GitHub Pages con cache busting
+                const pagesUrl = `https://${GITHUB_OWNER}.github.io/${GITHUB_REPO}/history.json?cache=${Date.now()}`;
+                console.log('📡 URL:', pagesUrl);
+                
+                const response = await fetch(pagesUrl);
+                
                 if (!response.ok) {
-                    const pagesUrl = `https://${GITHUB_OWNER}.github.io/${GITHUB_REPO}/history.json?t=${Date.now()}`;
-                    response = await fetch(pagesUrl);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 
-                if (!response.ok) throw new Error('No history');
+                const data = await response.json();
                 
-                historyData = await response.json();
+                if (!Array.isArray(data)) {
+                    throw new Error('Formato de datos inválido');
+                }
+                
+                historyData = data;
                 console.log(`✅ Historial cargado: ${historyData.length} ejecuciones`);
+                
                 updateStats();
                 renderHistory();
             } catch (error) {
-                console.log('⚠️ No hay historial disponible aún:', error.message);
+                console.warn('⚠️ No se pudo cargar el historial:', error.message);
                 historyData = [];
                 updateStats();
                 renderHistory();
@@ -1001,8 +1009,7 @@
                         <div class="history-meta-item">📅 ${item.dateFormatted}</div>
                         <div class="history-meta-item">� ${item.ambiente ? item.ambiente.toUpperCase() : 'N/A'}</div>
                         <div class="history-meta-item">�🏗️ Build #${item.runNumber}</div>
-                        <div class="history-meta-item">⏱️ ${item.duration.toFixed(2)}s</div>
-                        <div class="history-meta-item">👤 ${item.actor}</div>
+                        <div class="history-meta-item">👤 ${item.actor || 'N/A'}</div>
                     </div>
                     <div class="history-results">
                         <div class="result-badge passed">✅ ${item.passed} Passed</div>

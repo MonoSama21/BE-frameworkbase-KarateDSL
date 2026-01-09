@@ -401,6 +401,12 @@ jobs:
         mv "${HISTORY_FILE}.tmp" "$HISTORY_FILE"
         
         echo "✅ Historial actualizado"
+        echo "📊 Total de ejecuciones en historial: $(jq '. | length' "$HISTORY_FILE")"
+        echo "🔗 URL del historial: $PAGES_URL"
+        
+        # Mostrar las últimas 3 ejecuciones para verificación
+        echo "📜 Últimas 3 ejecuciones:"
+        jq -r '.[0:3] | .[] | "  - Run #\(.runNumber): \(.tag) [\(.status)] - \(.dateFormatted)"' "$HISTORY_FILE"
 
     - name: Deploy to GitHub Pages
       if: always()

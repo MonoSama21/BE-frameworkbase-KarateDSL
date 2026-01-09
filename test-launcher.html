@@ -927,14 +927,26 @@
         // LOAD HISTORY
         async function loadHistory() {
             try {
-                const response = await fetch('history.json');
+                // Intentar cargar desde la misma ubicación (para testing local)
+                let response = await fetch('history.json');
+                
+                // Si falla, intentar desde la URL completa de GitHub Pages
+                if (!response.ok) {
+                    const pagesUrl = `https://${GITHUB_OWNER}.github.io/${GITHUB_REPO}/history.json?t=${Date.now()}`;
+                    response = await fetch(pagesUrl);
+                }
+                
                 if (!response.ok) throw new Error('No history');
                 
                 historyData = await response.json();
+                console.log(`✅ Historial cargado: ${historyData.length} ejecuciones`);
                 updateStats();
                 renderHistory();
             } catch (error) {
-                console.log('No history available yet');
+                console.log('⚠️ No hay historial disponible aún:', error.message);
+                historyData = [];
+                updateStats();
+                renderHistory();
             }
         }
 
@@ -944,9 +956,9 @@
             const totalPassed = historyData.filter(h => h.status === 'passed').length;
             const totalFailed = historyData.filter(h => h.status === 'failed').length;
 
-            document.getElementById('totalExecutions').textContent = totalExecutions;
-            document.getElementById('totalPassed').textContent = totalPassed;
-            document.getElementById('totalFailed').textContent = totalFailed;
+            document.getElementById('totalExecutions').textContent = totalExecutions || '0';
+            document.getElementById('totalPassed').textContent = totalPassed || '0';
+            document.getElementById('totalFailed').textContent = totalFailed || '0';
         }
 
         // FILTER HISTORY

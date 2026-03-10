@@ -1,5 +1,24 @@
 [
   {
+    "id": "22905856406",
+    "runNumber": 79,
+    "tag": "@dailyTests",
+    "ambiente": "QA",
+    "date": "2026-03-10T13:52:44Z",
+    "dateFormatted": "10/03/2026 08:52",
+    "total": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "status": "passed",
+    "branch": "main",
+    "commit": "dc2d3e786608d09a2136f1ed3f94637313bb3b64",
+    "commitShort": "dc2d3e7",
+    "actor": "MonoSama21",
+    "reportUrl": "https://MonoSama21.github.io/BE-frameworkbase-KarateDSL/reports/79/karate-summary.html",
+    "actionsUrl": "https://github.com/MonoSama21/BE-frameworkbase-KarateDSL/actions/runs/22905856406"
+  },
+  {
     "id": "22856887400",
     "runNumber": 78,
     "tag": "@dailyTests",
@@ -929,24 +948,5 @@
     "actor": "MonoSama21",
     "reportUrl": "https://MonoSama21.github.io/BE-frameworkbase-KarateDSL/reports/30/karate-summary.html",
     "actionsUrl": "https://github.com/MonoSama21/BE-frameworkbase-KarateDSL/actions/runs/21250544340"
-  },
-  {
-    "id": "21211606824",
-    "runNumber": 29,
-    "tag": "@dailyTests",
-    "ambiente": "QA",
-    "date": "2026-01-21T13:36:34Z",
-    "dateFormatted": "21/01/2026 08:36",
-    "total": 0,
-    "passed": 0,
-    "failed": 0,
-    "skipped": 0,
-    "status": "passed",
-    "branch": "main",
-    "commit": "dc2d3e786608d09a2136f1ed3f94637313bb3b64",
-    "commitShort": "dc2d3e7",
-    "actor": "MonoSama21",
-    "reportUrl": "https://MonoSama21.github.io/BE-frameworkbase-KarateDSL/reports/29/karate-summary.html",
-    "actionsUrl": "https://github.com/MonoSama21/BE-frameworkbase-KarateDSL/actions/runs/21211606824"
   }
 ]
